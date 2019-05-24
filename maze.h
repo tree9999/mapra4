@@ -22,9 +22,11 @@ class MazeGraph : public DistanceGraph
 
         CostT estimatedCost( VertexT from, VertexT to) const override;
 
-        CostT cost( VertexT from, VertexT to) const override;
+        CostT cost( VertexT from, VertexT to) const override;\
 
-    friend ifstream& operator >> (ifstream& ifs, const MazeGraph& graph);
+        void setVertexCount(size_t cow) { vertexCount = cow; }
+
+    friend ifstream& operator >> (ifstream& ifs, MazeGraph& graph);
 };
 
 #endif // MAZE_H_INCLUDED

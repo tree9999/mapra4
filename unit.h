@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+using std::ifstream;
+
 typedef std::size_t                 VertexT;
 typedef std::pair<VertexT,VertexT>  EdgeT;
 typedef double                      CostT;

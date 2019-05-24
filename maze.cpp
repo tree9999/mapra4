@@ -1,7 +1,8 @@
 #include "maze.h"
 #include<string>
+#include<cmath>
 
-const NeighborT& MazeGraph::getNeighbors( VertexT v) const
+const DistanceGraph::NeighborT& MazeGraph::getNeighbors( VertexT v) const
 {
     return nachbarn[v];
 }
@@ -29,20 +30,20 @@ CostT MazeGraph::cost( VertexT from, VertexT to) const
     return infty;
 }
 
-ifstream& operator >> (ifstream& ifs, const MazeGraph& graph)
+ifstream& operator >> (ifstream& ifs, MazeGraph& graph)
 {
     size_t hoe, breit;
 
     ifs >> hoe >> breit;
 
-    graph.vertexCount = hoe*breit;
+    graph.setVertexCount(hoe*breit);
     graph.nachbarn.resize(hoe*breit);
     graph.breit = breit;
 
-    string mazeString = "";
-    for(int i = 0; i < hoe; i++)
+    std::string mazeString = "";
+    for(size_t i = 0; i < hoe; i++)
     {
-        string zeile;
+        std::string zeile;
         ifs >> zeile;
 
         mazeString += zeile;
@@ -61,7 +62,7 @@ ifstream& operator >> (ifstream& ifs, const MazeGraph& graph)
     for(size_t i = 0; i < hoe*breit; i++)
     {
         size_t zeile = i/breit;
-        size_t spalt = i%breit;
+        //size_t spalt = i%breit;
 
         if(zeile - breit >= 0)
             if(graph.maze[zeile - breit] == CellType::Ground) {
@@ -77,14 +78,15 @@ ifstream& operator >> (ifstream& ifs, const MazeGraph& graph)
 
         if((i-1)/breit == zeile && i-1 >= 0)
             if(graph.maze[i-1] == CellType::Ground) {
-                DistanceGraph::LocalEdgeT links(i-1);
+                DistanceGraph::LocalEdgeT links(i-1,1);
                 graph.nachbarn[i].push_back(links);
             }
 
         if((i+1)/breit == zeile && i+1 < graph.vertexCount)
             if(graph.maze[i+1] == CellType::Ground) {
-                DistanceGraph::LocalEdgeT rechts(i+1);
+                DistanceGraph::LocalEdgeT rechts(i+1,1);
                 graph.nachbarn[i].push_back(rechts);
             }
     }
+    return ifs;
 }

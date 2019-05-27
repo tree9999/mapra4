@@ -196,7 +196,7 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
     cout << "A* start: " << start << " -> " << ziel << " ...\n";
 
     // speichert Knoten & Kosten da sortiert wird
-    vector<DistanceGraph::LocalEdgeT> kostenMitH; // mit Heuristik. 
+    vector<DistanceGraph::LocalEdgeT> kostenMitH; // mit Heuristik.
     vector<CostT>   kostenOhneH; //ohne Heuristik. Index entspr. Knoten
     vector<VertexT> vorgaengers(g.numVertices(), start);
 
@@ -209,7 +209,7 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
         kostenOhneH.push_back(c);
         kostenMitH.push_back(le);
     }
-  
+
     while(kostenMitH.size() > 0) {
         //ermittle minimale Kosten
         std::make_heap(kostenMitH.begin(), kostenMitH.end(), CompareClass());
@@ -220,7 +220,7 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
             break;
 
         kostenMitH.erase(kostenMitH.begin());
-        
+
         DistanceGraph::NeighborT neiV = g.getNeighbors(minVert);
 
         //aktualisiere Kosten und VorgaengerIn
@@ -318,9 +318,9 @@ int main()
         graph = &mGraph;
         break;
     case 10:
-        mGraph.setzeMaze(ErzeugeLabyrinth(5, 5, 24));
-        mGraph.setzeHoehe(5);
-        mGraph.setzeBreite(5);
+        mGraph.setzeMaze(ErzeugeLabyrinth(256, 256, 1));
+        mGraph.setzeHoehe(256);
+        mGraph.setzeBreite(256);
         mGraph.setzeNachbarn();
         pair10.first  = mGraph.getStart();
         pair10.second = mGraph.getZiel();
@@ -332,7 +332,7 @@ int main()
     ifs.close();
 
     // PruefeHeuristik
-    PruefeHeuristik(*graph);
+    if (bspNummer != 10) PruefeHeuristik(*graph);
 
     // Loese die in der Aufgabenstellung beschriebenen Probleme fuer die jeweilige Datei
     // PruefeDijkstra / PruefeWeg

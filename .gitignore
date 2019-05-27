@@ -1,3 +1,4 @@
 #alles was hier steht wird ignoriert
 *.o
 !unit.o
+.vscode

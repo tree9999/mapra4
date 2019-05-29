@@ -4,6 +4,7 @@
 
 #include "text_visualizer.h"
 #include "unit.h"
+#include "visualizer.h"
 #include "maze.h"
 #include <fstream>
 #include <cmath>
@@ -32,6 +33,10 @@ class CoordinateGraph : public DistanceGraph
         CostT cost( VertexT from, VertexT to) const override;
 
         void setVertexCount(size_t cow) { vertexCount = cow; }
+
+        void getCoordis() { return coordinaten; }
+
+        void getAllNeighbors() { return nachbarn; }
 
     friend ifstream& operator >> (ifstream& ifs, CoordinateGraph& graph);
 };
@@ -261,6 +266,7 @@ int main()
     cin >> bspNummer;
 
     DistanceGraph* graph;
+    CoordVisualizer cVisu;
 
     EuclidGraph eGraph;
     GeoAbstandGraph gGraph;
@@ -275,21 +281,26 @@ int main()
     case 1:
         ifs.open("daten/Graph1.dat");
         ifs >> eGraph;
+        cVisu.setCoordis(eGraph.getCoordis());
+        cVisu.setEdges(eGraph.getAllNeighbors());
         graph = &eGraph;
         break;
     case 2:
         ifs.open("daten/Graph2.dat");
         ifs >> eGraph;
+        cVisu.setCoordis(eGraph.getCoordis());
         graph = &eGraph;
         break;
     case 3:
         ifs.open("daten/Graph3.dat");
         ifs >> gGraph;
+        cVisu.setCoordis(eGraph.getCoordis());
         graph = &gGraph;
         break;
     case 4:
         ifs.open("daten/Graph4.dat");
         ifs >> tGraph;
+        cVisu.setCoordis(eGraph.getCoordis());
         graph = &tGraph;
         break;
     case 5:
@@ -330,6 +341,11 @@ int main()
         break;
     }
     ifs.close();
+
+    sf::RenderWindow winnie(sf::VideoMode(800, 600), "fensterchen");
+    cVisu.setWindow(winnie);
+    cVisu.draw();
+    cVisu.draw();
 
     // PruefeHeuristik
     if (bspNummer != 10) PruefeHeuristik(*graph);

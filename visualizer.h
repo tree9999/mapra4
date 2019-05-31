@@ -5,14 +5,22 @@
 #include "unit.h"
 #include <string>
 
+using std::vector;
+
 class CoordVisualizer : public GraphVisualizer
 {
     private:
         sf::RenderWindow* w;
+        sf::Font myFont;
 
         typedef std::pair<double,double> CoordiB;
         vector<CoordiB>   coordinaten;
         vector<DistanceGraph::NeighborT> nachbarn;
+        // UnknownVertex, InQueue, Active, Done, Destination
+        vector<VertexStatus>  vStatus;
+        vector<EdgeStatus>    eStatus;
+        vector<double>   costos;
+        vector<double>   estimatos;
 
 
     public:
@@ -28,11 +36,15 @@ class CoordVisualizer : public GraphVisualizer
         // Zeichne den aktuellen Zustand des Graphen.
         virtual void draw() ;
 
-        void setWindow(const sf::RenderWindow&);
+        void setWindow(sf::RenderWindow&);
 
-        void setCoordis(const vector<CoordiB>& c) { coordinaten = c; }
+        void setCoordis(const vector<CoordiB>& c);
 
         void setEdges(const vector<DistanceGraph::NeighborT>& n) { nachbarn = n; }
+
+        void tranformCoordis(size_t hoe, size_t breit);
+
+        void drawArrowTxt(VertexT from, VertexT to, sf::Color col, std::string);
 };
 
 

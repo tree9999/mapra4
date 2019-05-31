@@ -34,9 +34,9 @@ class CoordinateGraph : public DistanceGraph
 
         void setVertexCount(size_t cow) { vertexCount = cow; }
 
-        void getCoordis() { return coordinaten; }
+        vector<CoordiB> getCoordis() { return coordinaten; }
 
-        void getAllNeighbors() { return nachbarn; }
+        vector<NeighborT> getAllNeighbors() { return nachbarn; }
 
     friend ifstream& operator >> (ifstream& ifs, CoordinateGraph& graph);
 };
@@ -199,21 +199,25 @@ class CompareClass {
 
 bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT ziel, std::list<VertexT>& weg) {
     cout << "A* start: " << start << " -> " << ziel << " ...\n";
+    typedef DistanceGraph::LocalEdgeT LocalEdgeT;
+    typedef DistanceGraph::NeighborT NeighborT;
 
-    // speichert Knoten & Kosten da sortiert wird
-    vector<DistanceGraph::LocalEdgeT> kostenMitH; // mit Heuristik.
-    vector<CostT>   kostenOhneH; //ohne Heuristik. Index entspr. Knoten
+    // speichert Knoten & Kosten da sortiert und dynamisch befuellt wird
+    vector<LocalEdgeT> kostenMitH; // mit Heuristik.
+
+    vector<CostT>   kostenOhneH(g.numVertices(), infty); //ohne Heuristik. Index entspr. Knoten
     vector<VertexT> vorgaengers(g.numVertices(), start);
+    vector<VertexStatus> status(g.numVertices(), VertexStatus::UnknownVertex);
 
-    // Kosten initialisieren
-    for(VertexT v = 0; v<g.numVertices(); v++) {
-        double c     = g.cost(start,v);
-        double cMitH = c+g.estimatedCost(v,ziel);
+    // Initalisiere Status und Kostenliste
+    status[ziel]  = VertexStatus::Destination;
+    status[start] = VertexStatus::Active;
+    kostenOhneH[start] = 0;
+    kostenMitH.push_back(LocalEdgeT(start,0));
 
-        DistanceGraph::LocalEdgeT le(v,cMitH);
-        kostenOhneH.push_back(c);
-        kostenMitH.push_back(le);
-    }
+    v.updateVertex(start, kostenOhneH[start], g.estimatedCost(start, ziel), 0, status[start]);
+    v.updateVertex(ziel,  kostenOhneH[ziel], 0, 0, status[ziel]);
+
 
     while(kostenMitH.size() > 0) {
         //ermittle minimale Kosten
@@ -221,25 +225,39 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
         VertexT minVert     = kostenMitH[0].first;
         CostT   minKost     = kostenOhneH[minVert];
 
-        if(minVert == ziel)
+        if(minVert == ziel) // Ziel schon erreicht
             break;
 
+        // Knoten abgearbeitet
         kostenMitH.erase(kostenMitH.begin());
+        status[minVert] = VertexStatus::Done;
 
-        DistanceGraph::NeighborT neiV = g.getNeighbors(minVert);
 
         //aktualisiere Kosten und VorgaengerIn
-        for(DistanceGraph::LocalEdgeT& le: neiV) {
-            CostT alt = kostenOhneH[le.first]; //le.first = neighbor
-            CostT neu = minKost + le.second; //le.second = cost(minVert,neighbor)
-            kostenOhneH[le.first] = std::min(alt,neu);
-            if(neu < alt)
-                vorgaengers[le.first] = minVert;
+        NeighborT neiV = g.getNeighbors(minVert);
+
+        for(LocalEdgeT& ne: neiV) {
+            if(status[ne.first] == VertexStatus::Done)
+                continue;
+
+            CostT alt = kostenOhneH[ne.first]; //ne.first = neighbor
+            CostT neu = minKost + ne.second; //ne.second = cost(minVert,neighbor)
+            if(neu < alt) {
+                kostenOhneH[ne.first] = std::min(alt,neu);
+                vorgaengers[ne.first] = minVert;
+
+                if(status[ne.first] != VertexStatus::InQueue)
+                    kostenMitH.push_back(LocalEdgeT(ne.first,0));
+                    // Kosten = 0. Werden im Anschluss aktualisiert
+
+                status[ne.first] = VertexStatus::InQueue;
+            }
         }
 
-        for(DistanceGraph::LocalEdgeT& le: kostenMitH) {
-            le.second = kostenOhneH[le.first] + g.estimatedCost(le.first,ziel);
+        for(LocalEdgeT& leH: kostenMitH) {
+            leH.second = kostenOhneH[leH.first] + g.estimatedCost(leH.first,ziel);
         }
+        v.draw();
     }
 
     if(kostenOhneH[ziel] < infty) {
@@ -252,6 +270,7 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
         weg.push_front(start);
         return true;
     }
+
     cout << "es scheint keinen Weg " << start << " -> " << ziel << " zu geben\n";
     return false; // Kein Weg gefunden.
 }
@@ -275,6 +294,8 @@ int main()
     ifstream ifs;
     EdgeT pair10; // Start und Ziel Paar fuer Bsp. 10
 
+    sf::RenderWindow* winnie;
+
     // Lade die zugehoerige Textdatei in einen Graphen
     switch(bspNummer)
     {
@@ -283,24 +304,39 @@ int main()
         ifs >> eGraph;
         cVisu.setCoordis(eGraph.getCoordis());
         cVisu.setEdges(eGraph.getAllNeighbors());
+        winnie = new sf::RenderWindow(sf::VideoMode(1000, 1000), "fensterchen");
+        cVisu.setWindow(*winnie);
+        cVisu.tranformCoordis(900,900);
         graph = &eGraph;
         break;
     case 2:
         ifs.open("daten/Graph2.dat");
         ifs >> eGraph;
         cVisu.setCoordis(eGraph.getCoordis());
+        cVisu.setEdges(eGraph.getAllNeighbors());
+        winnie = new sf::RenderWindow(sf::VideoMode(1000, 1000), "fensterchen");
+        cVisu.setWindow(*winnie);
+        cVisu.tranformCoordis(900,900);
         graph = &eGraph;
         break;
     case 3:
         ifs.open("daten/Graph3.dat");
         ifs >> gGraph;
-        cVisu.setCoordis(eGraph.getCoordis());
+        cVisu.setCoordis(gGraph.getCoordis());
+        cVisu.setEdges(gGraph.getAllNeighbors());
+        winnie = new sf::RenderWindow(sf::VideoMode(1400, 900), "fensterchen");
+        cVisu.setWindow(*winnie);
+        cVisu.tranformCoordis(1300,800);
         graph = &gGraph;
         break;
     case 4:
         ifs.open("daten/Graph4.dat");
         ifs >> tGraph;
-        cVisu.setCoordis(eGraph.getCoordis());
+        cVisu.setCoordis(tGraph.getCoordis());
+        cVisu.setEdges(tGraph.getAllNeighbors());
+        winnie = new sf::RenderWindow(sf::VideoMode(800, 900), "fensterchen");
+        cVisu.setWindow(*winnie);
+        cVisu.tranformCoordis(700,800);
         graph = &tGraph;
         break;
     case 5:
@@ -342,8 +378,7 @@ int main()
     }
     ifs.close();
 
-    sf::RenderWindow winnie(sf::VideoMode(800, 600), "fensterchen");
-    cVisu.setWindow(winnie);
+
     cVisu.draw();
     cVisu.draw();
 
@@ -366,13 +401,13 @@ int main()
             for(VertexT ziel = 0; ziel < graph->numVertices(); ziel++)
             {
                 std::list<VertexT> weg;
-                if(A_star(*graph, tv, start, ziel, weg))
+                if(A_star(*graph, cVisu, start, ziel, weg))
                     PruefeWeg(bspNummer, weg);
             }
         }
     }
 
-    // fuer Beispiele 1-9
+    // fuer Beispiele 5-9
     for ( auto pair : StartZielPaare(bspNummer)) {
         auto start = pair.first;
         auto goal  = pair.second;
@@ -394,6 +429,12 @@ int main()
             PruefeWeg(bspNummer, weg);
     }
 
+
+
+    while (winnie->isOpen())
+    {
+        cVisu.draw();
+    }
 
     return 0;
 }

@@ -13,12 +13,13 @@ class CoordVisualizer : public GraphVisualizer
         sf::RenderWindow* w;
         sf::Font myFont;
 
+        bool showCost = true;
         typedef std::pair<double,double> CoordiB;
         vector<CoordiB>   coordinaten;
+        //VertexStatus:  UnknownVertex, InQueue, Active, Done, Destination
         vector<DistanceGraph::NeighborT> nachbarn;
-        // UnknownVertex, InQueue, Active, Done, Destination
-        vector<VertexStatus>  vStatus;
-        vector<EdgeStatus>    eStatus;
+        vector<VertexStatus>        vStatus;
+        vector<vector<std::pair<VertexT, EdgeStatus>>>  eStatus;
         vector<double>   costos;
         vector<double>   estimatos;
 
@@ -40,7 +41,7 @@ class CoordVisualizer : public GraphVisualizer
 
         void setCoordis(const vector<CoordiB>& c);
 
-        void setEdges(const vector<DistanceGraph::NeighborT>& n) { nachbarn = n; }
+        void setEdges(const vector<DistanceGraph::NeighborT>& n);
 
         void tranformCoordis(size_t hoe, size_t breit);
 
@@ -53,6 +54,18 @@ class CoordVisualizer : public GraphVisualizer
 
 class MazeVisualizer : public GraphVisualizer
 {
+  private:
+    sf::RenderWindow* w;
+    sf::Font myFont;
+
+    size_t breit;
+    bool showCost = true;
+
+    vector<CellType> maze;
+    vector<VertexStatus> vStatus;
+    vector<double>   costos;
+    vector<double>   estimatos;
+
   public:
     // Zeige an, dass sich ein Knoten jetzt in dem angegebenen Zustand befindet.
     virtual void markVertex(VertexT vertex, VertexStatus status) ;
@@ -65,6 +78,14 @@ class MazeVisualizer : public GraphVisualizer
 
     // Zeichne den aktuellen Zustand des Graphen.
     virtual void draw() ;
+
+    void drawCell(VertexT, sf::Color col);
+
+    void setWindow(sf::RenderWindow& window) { w = &window; }
+
+    void setBreite(size_t breit) { this->breit = breit; }
+    
+    void setMaze(const vector<CellType>& maze);
 };
 
 #endif // VISUALIZER_H_INCLUDED

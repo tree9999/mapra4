@@ -40,6 +40,10 @@ class MazeGraph : public DistanceGraph
 
         size_t getZiel() const { return ziel; }
 
+        vector<CellType> getMaze() const { return maze; }
+
+        size_t getBreite() const { return breit; }
+
     friend ifstream& operator >> (ifstream& ifs, MazeGraph& graph);
 };
 

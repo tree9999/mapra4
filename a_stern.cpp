@@ -34,9 +34,9 @@ class CoordinateGraph : public DistanceGraph
 
         void setVertexCount(size_t cow) { vertexCount = cow; }
 
-        vector<CoordiB> getCoordis() { return coordinaten; }
+        vector<CoordiB> getCoordis() const { return coordinaten; }
 
-        vector<NeighborT> getAllNeighbors() { return nachbarn; }
+        vector<NeighborT> getAllNeighbors() const { return nachbarn; }
 
     friend ifstream& operator >> (ifstream& ifs, CoordinateGraph& graph);
 };
@@ -215,8 +215,19 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
     kostenOhneH[start] = 0;
     kostenMitH.push_back(LocalEdgeT(start,0));
 
-    v.updateVertex(start, kostenOhneH[start], g.estimatedCost(start, ziel), 0, status[start]);
-    v.updateVertex(ziel,  kostenOhneH[ziel], 0, 0, status[ziel]);
+    // Grafik initialisieren
+    for(size_t i = 0; i<g.numVertices(); i++)
+        v.updateVertex(i, kostenOhneH[i], g.estimatedCost(i, ziel), i, status[i]);
+    
+    for (size_t i = 0; i < g.numVertices(); i++)
+    {
+        NeighborT neiV = g.getNeighbors(i);
+        for (LocalEdgeT& ne : neiV)
+        {            
+            v.markEdge(EdgeT(i,ne.first), EdgeStatus::UnknownEdge);
+        }        
+    }
+    v.draw();
 
 
     while(kostenMitH.size() > 0) {
@@ -225,13 +236,15 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
         VertexT minVert     = kostenMitH[0].first;
         CostT   minKost     = kostenOhneH[minVert];
 
-        if(minVert == ziel) // Ziel schon erreicht
-            break;
-
         // Knoten abgearbeitet
         kostenMitH.erase(kostenMitH.begin());
         status[minVert] = VertexStatus::Done;
+        v.markEdge(EdgeT(vorgaengers[minVert],minVert),EdgeStatus::Optimal);
+        v.markVertex(minVert, VertexStatus::Active);
+        v.draw();
 
+        if(minVert == ziel) // Ziel schon erreicht
+            break;
 
         //aktualisiere Kosten und VorgaengerIn
         NeighborT neiV = g.getNeighbors(minVert);
@@ -239,6 +252,7 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
         for(LocalEdgeT& ne: neiV) {
             if(status[ne.first] == VertexStatus::Done)
                 continue;
+
 
             CostT alt = kostenOhneH[ne.first]; //ne.first = neighbor
             CostT neu = minKost + ne.second; //ne.second = cost(minVert,neighbor)
@@ -252,27 +266,58 @@ bool A_star(const DistanceGraph& g, GraphVisualizer& v, VertexT start, VertexT z
 
                 status[ne.first] = VertexStatus::InQueue;
             }
+            v.updateVertex(ne.first, kostenOhneH[ne.first], g.estimatedCost(ne.first,ziel),
+                    vorgaengers[ne.first],status[ne.first]);
+            // v.markEdge(EdgeT(minVert,ne.first),EdgeStatus::Active);
+            // v.draw();
+            v.markEdge(EdgeT(minVert,ne.first),EdgeStatus::Visited);
         }
 
         for(LocalEdgeT& leH: kostenMitH) {
             leH.second = kostenOhneH[leH.first] + g.estimatedCost(leH.first,ziel);
         }
+
         v.draw();
+        v.markVertex(minVert, VertexStatus::Done);
     }
 
     if(kostenOhneH[ziel] < infty) {
         VertexT vorgaenger = ziel;
+        v.markVertex(ziel, VertexStatus::Destination);
         while (vorgaenger != start)
         {
             weg.push_front(vorgaenger);
             vorgaenger = vorgaengers[vorgaenger];
+            v.markVertex(vorgaenger, VertexStatus::Destination);
         }
         weg.push_front(start);
+        // Warte bis Ende
+        for (size_t i = 0; i < 5; i++)
+            v.draw();
+        
+        
         return true;
     }
 
     cout << "es scheint keinen Weg " << start << " -> " << ziel << " zu geben\n";
     return false; // Kein Weg gefunden.
+}
+
+void inintCoordVisu(CoordVisualizer& cVisu, const CoordinateGraph& cGraph, size_t breit, size_t hoe, sf::RenderWindow*& w)
+{
+    cVisu.setCoordis(cGraph.getCoordis());
+    cVisu.setEdges(cGraph.getAllNeighbors());
+    w = new sf::RenderWindow(sf::VideoMode(breit, hoe), "fensterchen");
+    cVisu.setWindow(*w);
+    cVisu.tranformCoordis(breit-100,hoe-100);
+}
+
+void inintMazeVisu(MazeVisualizer& mVisu, const MazeGraph& mGraph, size_t breit, size_t hoe, sf::RenderWindow*& w)
+{
+    mVisu.setMaze(mGraph.getMaze());
+    mVisu.setBreite(mGraph.getBreite());
+    w = new sf::RenderWindow(sf::VideoMode(breit, hoe), "fensterchen");
+    mVisu.setWindow(*w);
 }
 
 int main()
@@ -284,13 +329,16 @@ int main()
         << "bitte jetzt eine Zahl von 1-10 eintippen (nichts anderes sonst kommen wir nicht klar). Jetzt bitte wirklich\n";
     cin >> bspNummer;
 
-    DistanceGraph* graph;
-    CoordVisualizer cVisu;
+    DistanceGraph*    graph;
+    GraphVisualizer*  visu;
 
-    EuclidGraph eGraph;
+    EuclidGraph     eGraph;
     GeoAbstandGraph gGraph;
-    TimeGraph tGraph;
-    MazeGraph mGraph;
+    TimeGraph       tGraph;
+    MazeGraph       mGraph;
+    CoordVisualizer cVisu;
+    MazeVisualizer  mVisu;
+
     ifstream ifs;
     EdgeT pair10; // Start und Ziel Paar fuer Bsp. 10
 
@@ -302,66 +350,55 @@ int main()
     case 1:
         ifs.open("daten/Graph1.dat");
         ifs >> eGraph;
-        cVisu.setCoordis(eGraph.getCoordis());
-        cVisu.setEdges(eGraph.getAllNeighbors());
-        winnie = new sf::RenderWindow(sf::VideoMode(1000, 1000), "fensterchen");
-        cVisu.setWindow(*winnie);
-        cVisu.tranformCoordis(900,900);
+        inintCoordVisu(cVisu, eGraph, 600, 600, winnie);
         graph = &eGraph;
         break;
     case 2:
         ifs.open("daten/Graph2.dat");
         ifs >> eGraph;
-        cVisu.setCoordis(eGraph.getCoordis());
-        cVisu.setEdges(eGraph.getAllNeighbors());
-        winnie = new sf::RenderWindow(sf::VideoMode(1000, 1000), "fensterchen");
-        cVisu.setWindow(*winnie);
-        cVisu.tranformCoordis(900,900);
+        inintCoordVisu(cVisu, eGraph, 1000, 1000, winnie);
         graph = &eGraph;
         break;
     case 3:
         ifs.open("daten/Graph3.dat");
         ifs >> gGraph;
-        cVisu.setCoordis(gGraph.getCoordis());
-        cVisu.setEdges(gGraph.getAllNeighbors());
-        winnie = new sf::RenderWindow(sf::VideoMode(1400, 900), "fensterchen");
-        cVisu.setWindow(*winnie);
-        cVisu.tranformCoordis(1300,800);
+        inintCoordVisu(cVisu, gGraph, 1400, 900, winnie);
         graph = &gGraph;
         break;
     case 4:
         ifs.open("daten/Graph4.dat");
         ifs >> tGraph;
-        cVisu.setCoordis(tGraph.getCoordis());
-        cVisu.setEdges(tGraph.getAllNeighbors());
-        winnie = new sf::RenderWindow(sf::VideoMode(800, 900), "fensterchen");
-        cVisu.setWindow(*winnie);
-        cVisu.tranformCoordis(700,800);
+        inintCoordVisu(cVisu, tGraph, 850, 1000, winnie);
         graph = &tGraph;
         break;
     case 5:
         ifs.open("daten/Maze1.dat");
         ifs >> mGraph;
+        inintMazeVisu(mVisu, mGraph, 500, 500, winnie);
         graph = &mGraph;
         break;
     case 6:
         ifs.open("daten/Maze2.dat");
         ifs >> mGraph;
+        inintMazeVisu(mVisu, mGraph, 500, 500, winnie);
         graph = &mGraph;
         break;
     case 7:
         ifs.open("daten/Maze3.dat");
         ifs >> mGraph;
+        inintMazeVisu(mVisu, mGraph, 850, 850, winnie);
         graph = &mGraph;
         break;
     case 8:
         ifs.open("daten/Maze4.dat");
         ifs >> mGraph;
+        inintMazeVisu(mVisu, mGraph, 1000, 1000, winnie);
         graph = &mGraph;
         break;
     case 9:
         ifs.open("daten/Maze5.dat");
         ifs >> mGraph;
+        inintMazeVisu(mVisu, mGraph, 1000, 1000, winnie);
         graph = &mGraph;
         break;
     case 10:
@@ -371,6 +408,7 @@ int main()
         mGraph.setzeNachbarn();
         pair10.first  = mGraph.getStart();
         pair10.second = mGraph.getZiel();
+        inintMazeVisu(mVisu, mGraph, 1200, 1000, winnie);
         graph = &mGraph;
         break;
     default:
@@ -378,9 +416,9 @@ int main()
     }
     ifs.close();
 
-
-    cVisu.draw();
-    cVisu.draw();
+    if (bspNummer < 5)
+        visu = &cVisu;        
+    else visu = &mVisu;
 
     // PruefeHeuristik
     if (bspNummer != 10) PruefeHeuristik(*graph);
@@ -414,7 +452,7 @@ int main()
         std::list<VertexT> weg;
 
         // (Berechne den kuerzesten Weg von start zu goal)
-        if(A_star(*graph, tv, start, goal, weg))
+        if(A_star(*graph, mVisu, start, goal, weg))
             PruefeWeg(bspNummer, weg);
     }
 
@@ -425,7 +463,7 @@ int main()
         std::list<VertexT> weg;
 
         // (Berechne den kuerzesten Weg von start zu goal)
-        if(A_star(*graph, tv, start, goal, weg))
+        if(A_star(*graph, mVisu, start, goal, weg))
             PruefeWeg(bspNummer, weg);
     }
 
@@ -433,7 +471,7 @@ int main()
 
     while (winnie->isOpen())
     {
-        cVisu.draw();
+        visu->draw();
     }
 
     return 0;
